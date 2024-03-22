@@ -43,7 +43,8 @@
     <p id="scoreMessage" style="display: none">bruh</p>
   </body>
   <script>
-    let host = "http://localhost:8080";
+    // let host = "http://localhost:8080";
+    let host = "https://midterm-latest-a8cx.onrender.com";
     displayTheQuizzes();
     async function getAll() {
       let response = await fetch(host + "/quizzes");
@@ -108,7 +109,7 @@
       // div.style.display = "block"; // Ensure block-level display
 
       let innerHtml = `
-      <img src="http://localhost:8080/questions/${question.id}/image" alt="question" style="width:100%">
+      <img src="https://midterm-latest-a8cx.onrender.com/questions/${question.id}/image" alt="question" style="width:100%">
         <div class="container">
           <h4><b>${question.id}</b></h4>
           <p>${question.description}</p>

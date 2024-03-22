@@ -1,11 +1,212 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
-</head>
-<body>
-  
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Take a quiz</title>
+    <link rel="stylesheet" href="navbar.css" />
+    <link rel="stylesheet" href="general.css" />
+    <link rel="stylesheet" href="cards.css" />
+    <style>
+      .prevNextContainer {
+        display: flex; /* Use flexbox */
+        justify-content: space-between; /* Distribute items evenly along the main axis */
+        align-items: center; /* Center items vertically */
+        margin: auto;
+        width: 30%;
+      }
+    </style>
+  </head>
+  <body>
+    <ul class="topnav">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="add-question.html">Add questions</a></li>
+      <li><a href="make-a-quiz.html">Create a quiz</a></li>
+      <li><a class="active" href="take-a-quiz.html">Take a quiz</a></li>
+      <li class="right"><a href="#about">About</a></li>
+    </ul>
+    <h2 id="quizInstructions">
+      Here are the list of all available quizzes. Click on a quiz to start
+      taking the quiz.
+    </h2>
+    <div id="list" class="cards"></div>
+
+    <div id="quizQuestion" style="display: none"></div>
+
+    <div class="prevNextContainer">
+      <button id="previousBtn" class="btn" onclick="previousQuestion()">
+        Previous
+      </button>
+      <p id="questionIndex">Question</p>
+      <button id="nextBtn" class="btn" onclick="nextQuestion()">Next</button>
+    </div>
+    <p id="scoreMessage" style="display: none">bruh</p>
+  </body>
+  <script>
+    let host = "http://localhost:8080";
+    displayTheQuizzes();
+    async function getAll() {
+      let response = await fetch(host + "/quizzes");
+      let result = await response.json();
+      return result;
+    }
+    async function displayTheQuizzes() {
+      let quizzes = await getAll();
+      // console.log(quizzes);
+      let list = document.getElementById("list");
+      list.innerHTML = "";
+      for (let quiz of quizzes) {
+        let div = document.createElement("div");
+        div.setAttribute("onclick", `setQuiz(${quiz.id})`);
+        div.className = "card";
+
+        let innerHtml = `
+          <div class="container">
+            <h4><b>${quiz.id}</b></h4>
+            <p>${quiz.title}</p>
+            <p>(${quiz.questionIds.length} questions)</p>
+          </div>
+        `;
+        div.innerHTML = innerHtml;
+        list.appendChild(div);
+      }
+    }
+    let currentQuestionIndex = -1;
+    let quizQuestions = [];
+    let userAnswers = {};
+    let quizName = "";
+    // let quizResponses = [];
+    // let numCorrect = 0;
+    async function setQuiz(quizId) {
+      let quizzes = await getAll();
+      quizQuestions = quizzes.filter((q) => q.id === quizId)[0].questions;
+      quizName = quizzes.filter((q) => q.id === quizId)[0].title;
+      currentQuestionIndex = 0;
+      displayQuestion(quizQuestions[currentQuestionIndex]);
+      updateQuestionIndex();
+
+      let quizQuestion = document.getElementById("quizQuestion");
+      quizQuestion.style.display = "block";
+
+      let questionIndexElement = document.getElementById("list");
+      let h2Element = document.getElementById("quizInstructions");
+      console.log(questionIndexElement);
+      questionIndexElement.style.display = "none";
+      h2Element.style.display = "none";
+    }
+    async function displayQuestion(question) {
+      let quizQuestion = document.getElementById("quizQuestion");
+      // quizQuestion.style.margin = "auto";
+      quizQuestion.innerHTML = "";
+      let div = document.createElement("div");
+      div.className = "custom-card";
+      // div.setAttribute("onclick", ``);
+
+      // div.style.margin = "blue";
+      // div.style.margin = "auto";
+      // div.style.margin = "0 auto";
+      // div.style.display = "block"; // Ensure block-level display
+
+      let innerHtml = `
+      <img src="http://localhost:8080/questions/${question.id}/image" alt="question" style="width:100%">
+        <div class="container">
+          <h4><b>${question.id}</b></h4>
+          <p>${question.description}</p>
+          <form>
+              <input type="radio" id="q${question.id}ptionA" name="q2Answer" value="A">
+              <label for="q${question.id}ptionA">${question.choices[0]}</label><br>
+
+              <input type="radio" id="q${question.id}ptionB" name="q2Answer" value="B">
+              <label for="q${question.id}ptionB">${question.choices[1]}</label><br>
+
+              <input type="radio" id="q${question.id}ptionC" name="q2Answer" value="C">
+              <label for="q${question.id}ptionC">${question.choices[2]}</label><br>
+          </form>
+        </div>
+        `;
+
+      div.innerHTML = innerHtml;
+      quizQuestion.appendChild(div);
+    }
+    function updateQuestionIndex() {
+      let questionIndexElement = document.getElementById("questionIndex");
+      questionIndexElement.textContent = `Question ${
+        currentQuestionIndex + 1
+      } out of ${quizQuestions.length}`;
+      console.log(currentQuestionIndex);
+
+      let containerDiv = document.querySelector(".prevNextContainer");
+
+      if (currentQuestionIndex === -1) {
+        containerDiv.style.display = "none"; // Hide the container
+      } else {
+        containerDiv.style.display = "flex"; // Show the container
+        questionIndexElement.textContent = `Question ${
+          currentQuestionIndex + 1
+        } out of ${quizQuestions.length}`;
+      }
+    }
+    function nextQuestion() {
+      let selectedLabel = document.querySelector(
+        'input[name="q2Answer"]:checked+label'
+      );
+
+      if (selectedLabel) {
+        userAnswers[currentQuestionIndex] = selectedLabel.textContent.trim();
+      }
+      if (currentQuestionIndex < quizQuestions.length - 1) {
+        currentQuestionIndex++;
+        displayQuestion(quizQuestions[currentQuestionIndex]);
+        updateQuestionIndex();
+        document.getElementById("scoreMessage").style.display = "none";
+      } else {
+        // Submit quiz or show results
+        submitQuiz();
+      }
+    }
+
+    function previousQuestion() {
+      // saveAnswer();
+      if (currentQuestionIndex > 0) {
+        currentQuestionIndex--;
+        displayQuestion(quizQuestions[currentQuestionIndex]);
+        updateQuestionIndex();
+      }
+    }
+    // function saveAnswer() {
+    //   let selectedAnswer = document.querySelector(
+    //     `input[name="q2Answer"]:checked`
+    //   );
+    //   if (selectedAnswer) {
+    //     userAnswers[currentQuestionIndex] = selectedAnswer.value;
+    //   }
+    //   console.log(selectedAnswer);
+    // }
+
+    function submitQuiz() {
+      // Calculate score
+      let score = 0;
+      for (let i = 0; i < quizQuestions.length; i++) {
+        // console.log(userAnswers[i]);
+        // console.log(quizQuestions[i].answer);
+        if (userAnswers[i] === quizQuestions[i].answer) {
+          score++;
+        }
+      }
+      // Display score
+      let scoreMessage = document.getElementById("scoreMessage");
+      scoreMessage.textContent = `You completed the quiz ${quizName}. You scored ${score} out of ${quizQuestions.length}.`;
+      scoreMessage.style.display = "block";
+
+      let quizQuestion = document.getElementById("quizQuestion");
+      quizQuestion.style.display = "none";
+
+      let h2Element = document.getElementById("quizInstructions");
+      h2Element.style.display = "none";
+      let questionIndexElement =
+        document.getElementsByClassName("prevNextContainer")[0];
+      questionIndexElement.style.display = "none";
+    }
+    updateQuestionIndex();
+  </script>
 </html>

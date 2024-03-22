@@ -1,11 +1,206 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
-</head>
-<body>
-  
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Make a quiz</title>
+    <link rel="stylesheet" href="navbar.css" />
+    <link rel="stylesheet" href="general.css" />
+    <link rel="stylesheet" href="cards.css" />
+    <link rel="stylesheet" href="make-a-quiz.css" />
+  </head>
+  <body>
+    <ul class="topnav">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="add-question.html">Add questions</a></li>
+      <li><a class="active" href="make-a-quiz.html">Create a quiz</a></li>
+      <li><a href="take-a-quiz.html">Take a quiz</a></li>
+      <li class="right"><a href="#about">About</a></li>
+    </ul>
+    <div class="questions">
+      <h1>Questions Bank</h1>
+      <h2>Click on a question and add it to the quiz</h2>
+      <div id="list" class="cards"></div>
+    </div>
+
+    <div class="quiz">
+      <h1>The new quiz</h1>
+      <form action="">
+        <label for="quizTitle">Quiz title:</label>
+        <textarea
+          id="quizTitle"
+          name="description"
+          rows="1"
+          cols="15"
+          required
+        ></textarea>
+        <input type="button" value="Save your changes" onclick="add()" />
+        <input
+          type="button"
+          value="Save this quiz and start a new one"
+          onclick="addAndRefresh()"
+        />
+      </form>
+      <h3>
+        If you want to remvoe a question from the quiz, you can click on the
+        question here ant it will be removed from the quiz.
+      </h3>
+      <div id="selectedQuestions" class="cards"></div>
+    </div>
+  </body>
+
+  <script>
+    let host = "http://localhost:8080";
+    let questions = [];
+    displayTheQuestions();
+    async function getAll() {
+      let response = await fetch(host + "/questions");
+      let result = await response.json();
+      return result;
+    }
+
+    async function displayTheQuestions() {
+      questions = await getAll();
+
+      let list = document.getElementById("list");
+      list.innerHTML = "";
+      const selectedQuestionsList =
+        document.getElementById("selectedQuestions");
+      let selectedQuestionIds = Array.from(selectedQuestionsList.children).map(
+        (child) => parseInt(child.querySelector("b").textContent)
+      );
+
+      for (let question of questions) {
+        if (!selectedQuestionIds.includes(question.id)) {
+          let div = document.createElement("div");
+          div.setAttribute("onclick", `toggleQuestionOn(${question.id})`);
+
+          div.className = "card";
+          let innerHtml = `
+
+        <img src="http://localhost:8080/questions/${question.id}/image" alt="question" style="width:100%">
+        <div class="container">
+          <h4><b>${question.id}</b></h4>
+          <p>${question.description}</p>
+          <form>
+              <input type="radio" id="q${question.id}ptionA" name="q2Answer" value="A">
+              <label for="q${question.id}ptionA">${question.choices[0]}</label><br>
+
+              <input type="radio" id="q${question.id}ptionB" name="q2Answer" value="B">
+              <label for="q${question.id}ptionB">${question.choices[1]}</label><br>
+
+              <input type="radio" id="q${question.id}ptionC" name="q2Answer" value="C">
+              <label for="q${question.id}ptionC">${question.choices[2]}</label><br>
+          </form>
+        </div>
+
+            `;
+          div.innerHTML = innerHtml;
+          list.appendChild(div);
+        }
+      }
+    }
+
+    async function toggleQuestionOn(questionId) {
+      questions = await getAll();
+      question = questions.filter((q) => (q.id = questionId))[0];
+
+      const selectedQuestionsList =
+        document.getElementById("selectedQuestions");
+      let div = document.createElement("div");
+      div.className = "card";
+      div.setAttribute("onclick", `toggleQuestionOff(${question.id})`);
+
+      let innerHtml = `
+
+        <img src="http://localhost:8080/questions/${question.id}/image" alt="question" style="width:100%">
+        <div class="container">
+          <h4><b>${question.id}</b></h4>
+          <p>${question.description}</p>
+          <form>
+              <input type="radio" id="q${question.id}ptionA" name="q2Answer" value="A">
+              <label for="q${question.id}ptionA">${question.choices[0]}</label><br>
+
+              <input type="radio" id="q${question.id}ptionB" name="q2Answer" value="B">
+              <label for="q${question.id}ptionB">${question.choices[1]}</label><br>
+
+              <input type="radio" id="q${question.id}ptionC" name="q2Answer" value="C">
+              <label for="q${question.id}ptionC">${question.choices[2]}</label><br>
+          </form>
+        </div>
+
+            `;
+      div.innerHTML = innerHtml;
+      selectedQuestionsList.appendChild(div);
+      displayTheQuestions();
+    }
+    async function toggleQuestionOff(questionId) {
+      questions = await getAll();
+      question = questions.filter((q) => (q.id = questionId))[0];
+
+      const selectedQuestionsList =
+        document.getElementById("selectedQuestions");
+      const filteredQuestions = Array.from(
+        selectedQuestionsList.children
+      ).filter(
+        (child) => parseInt(child.querySelector("b").textContent) !== questionId
+      );
+
+      // Clear existing content of selectedQuestionsList
+      selectedQuestionsList.innerHTML = "";
+
+      // Append filtered questions to selectedQuestionsList
+      filteredQuestions.forEach((question) =>
+        selectedQuestionsList.appendChild(question)
+      );
+
+      displayTheQuestions();
+    }
+    let buttonClicked = false;
+
+    async function add() {
+      const quizTitle = document.getElementById("quizTitle").value;
+      const selectedQuestionsList =
+        document.getElementById("selectedQuestions");
+      let selectedQuestionIds = Array.from(selectedQuestionsList.children).map(
+        (child) => parseInt(child.querySelector("b").textContent)
+      );
+      const quiz = {
+        title: quizTitle,
+        questionIds: selectedQuestionIds,
+      };
+
+      if (!buttonClicked) {
+        buttonClicked = true;
+        let response = fetch(host + "/quizzes", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(quiz),
+        });
+      } else {
+        let response = await fetch(host + "/quizzes");
+        let quizzes = await response.json();
+        let maxId = 0;
+        for (let i = 0; i < quizzes.length; i++) {
+          if (quizzes[i].id > maxId) {
+            maxId = quizzes[i].id;
+          }
+        }
+
+        let response2 = fetch(host + "/quizzes/" + maxId, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(quiz),
+        });
+      }
+    }
+    async function addAndRefresh() {
+      add();
+      window.location.reload();
+    }
+  </script>
 </html>
